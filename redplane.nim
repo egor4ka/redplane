@@ -65,7 +65,7 @@ while true:
   p.next
   case p.key
   of "t":
-    putEnv("MAKEFLAGS", fmt"-j{p.val}"
+    putEnv("MAKEFLAGS", fmt"-j{p.val}")
   of "y":
     yesToAll = true
   of "i":
