@@ -2,8 +2,15 @@
 import std/os
 import std/strformat
 import std/strutils
-import system
+import parseopt
 
+var
+  p = initOptParser()
+  yesToAll = ""
+  yn = ""
+  multiplePkgs = ""
+  allPkgs = newSeq[string]
+  
 #create procedures
 proc errorPrompt(err: string): int =
   echo fmt"KABOOM! plane crash: {err}"
@@ -25,23 +32,26 @@ proc cleanUp(pkg: string): int =
 proc addToUpdateScript(pkg: string): int =
   discard execShellCmd(fmt"tee -a {pkg} to-update")
   return 0
+proc installPkg(pkg: string): int =
+  if pacmanInstall(pkg) != 0:
+    discard clonePkg(pkg)
+    discard makePkg(pkg)
+    discard cleanUp(pkg)
+    discard addToUpdateScript(pkg)
+  else:
+    echo "pacman has successfully installed the package."
 
 #create files
 discard mkfiles()
 
 #check the parameters and execute accordingly
 when declared(commandLineParams):
-  var param = "-y"
-  var longParam = "--yes"
-  var yesToAll = ""
-  var yn = ""
-  var multiplePkgs = ""
 
-  if commandLineParams().len == 0:
-    discard errorPrompt("no option specified")
+
+
 
   if commandLineParams().contains(param) or commandLineParams().contains(longParam):
-    yesToAll = "yes"
+  
   else:
     yesToAll = "no"
 
@@ -52,10 +62,7 @@ when declared(commandLineParams):
 
   if commandLineParams().contains(param) or commandLineParams().contains(longParam):
     for i in commandLineParams()[paraminput + 1]:
-      if i == ',':
-        echo "multiple packages detected! attempting parse"
-        multiplePkgs = "yes"
-    if multiplePkgs == "yes":
+       if multiplePkgs == "yes":
       for i in allPkgs:
         if pacmanInstall(i) != 0:
           if yesToAll == "no":
@@ -111,12 +118,43 @@ when declared(commandLineParams):
         discard makePkg(line)
         discard cleanUp(line)
 
-  param = "-h"
-  longParam = "--help"
-  if commandLineParams().contains(param) or commandLineParams().contains(longParam):
-    echo "usage:\n -u or --update: update\n -i or --install: install (tip: you can install multiple pkgs by separating them with a comma)\n -h: help\n -t or --threads: specify amount of threads\n -y or --yes: answer yes to all prompts\n -h or --help: view usage"
+if commandLineParams().len == 0:
+  discard errorPrompt("no option specified")
 
-  param = "-t"
-  longParam = "--threads"
-  if commandLineParams().contains(param) or commandLineParams().contains(longParam):
-      putEnv("MAKEFLAGS", "-j" & commandLineParams()[paraminput + 2])
+while true:
+  p.next
+  case p.key
+  of "t":
+    putEnv("MAKEFLAGS", fmt"-j{p.val}" 
+  of "y":
+    yesToAll = "yes"
+  of "i":
+    for i in p.val:
+      if i == ',':
+        echo "multiple packages detected! attempting parse"
+        multiplePkgs = "yes"
+        allPkgs = p.val.split(",")
+    if multiplePkgs == "yes":
+      if yesToAll == "yes":
+        for i in allPkgs:
+          installPkg(i)
+      else:
+        echo "would you like to install those packages [y/n]: ", allPkgs
+        yn = readLine(stdin)
+        if yn == "y":
+          for i in allPkgs:
+            installPkg(i)
+        else:
+          echo yn
+          quit(0)
+    else:
+      if yesToAll == "yes":
+        installPkg(p.val)
+      else:
+        echo "would you like to install this package [y/n]: ", p.val
+        yn = readLine(stdin)
+        if yn == "y":
+          installPkg(p.val)
+        else:
+          echo yn
+          quit(0)
