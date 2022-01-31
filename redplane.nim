@@ -1,17 +1,22 @@
-#import necessary libraries
-import std/os
-import std/strformat
-import std/strutils
-import parseopt
+#Import necessary libraries
+import os, strformat, strutils, parseopt
 
+#Declare variables
 var
   p = initOptParser()
   yesToAll = ""
   yn = ""
   multiplePkgs = ""
   allPkgs = newSeq[string]
-  
-#create procedures
+  usageString = """
+  -h: return help
+  -u: update packages in to-update file
+  -i: install package  (value required) (can install multiple if separated by a comma, example: obs,telegram-desktop,linux-lqx)
+  -y: answer yes to all prompts
+  tip: use the flags that requite a value like -flag:value, not -flag value
+"""
+
+#Create the required procedures
 proc errorPrompt(err: string): int =
   echo fmt"KABOOM! plane crash: {err}"
   quit(1)
@@ -37,95 +42,22 @@ proc installPkg(pkg: string): int =
     discard clonePkg(pkg)
     discard makePkg(pkg)
     discard cleanUp(pkg)
-    discard addToUpdateScript(pkg)
   else:
     echo "pacman has successfully installed the package."
 
-#create files
+#Create required files
 discard mkfiles()
 
-#check the parameters and execute accordingly
-when declared(commandLineParams):
-
-
-
-
-  if commandLineParams().contains(param) or commandLineParams().contains(longParam):
-  
-  else:
-    yesToAll = "no"
-
-  param = "-i"
-  longParam = "--install"
-  var paraminput = find(commandLineParams(), param)
-  var allPkgs = commandLineParams()[paraminput + 1].split(",")
-
-  if commandLineParams().contains(param) or commandLineParams().contains(longParam):
-    for i in commandLineParams()[paraminput + 1]:
-       if multiplePkgs == "yes":
-      for i in allPkgs:
-        if pacmanInstall(i) != 0:
-          if yesToAll == "no":
-            echo "pacman fckd up. wanna try aur? [y/n]: "
-            var yn = stdin.readLine()
-            if yn == "y":
-              discard clonePkg(i)
-              discard makePkg(i)
-              discard cleanUp(i)
-              discard addToUpdateScript(i)
-              quit(0)
-            else:
-              quit(0)
-          else:
-            discard clonePkg(i)
-            discard makePkg(i)
-            discard cleanUp(i)
-            discard addToUpdateScript(i)
-    else:
-      if pacmanInstall(commandLineParams()[paraminput + 1]) != 0:
-        if yesToAll == "no":
-          echo "pacman fckd up. wanna try aur? [y/n]: "
-          var yn = stdin.readLine()
-          if yn == "y":
-            discard clonePkg(commandLineParams()[paraminput + 1])
-            discard makePkg(commandLineParams()[paraminput + 1])
-            discard cleanUp(commandLineParams()[paraminput + 1])
-            discard addToUpdateScript(commandLineParams()[paraminput + 1])
-            quit(0)
-          else:
-            quit(0)
-        else:
-          discard clonePkg(commandLineParams()[paraminput + 1])
-          discard makePkg(commandLineParams()[paraminput + 1])
-          discard cleanUp(commandLineParams()[paraminput + 1])
-          discard addToUpdateScript(commandLineParams()[paraminput + 1])
-
-  param = "-u"
-  longParam = "--update"
-  if commandLineParams().contains(param) or commandLineParams().contains(longParam):
-    if yesToAll == "no":
-      yn = stdin.readLine()
-      if yn == "y":
-        for line in lines("to-update"):
-          discard clonePkg(line)
-          discard makePkg(line)
-          discard cleanUp(line)
-      else:
-        quit(0)
-    else:
-      for line in lines("to-update"):
-        discard clonePkg(line)
-        discard makePkg(line)
-        discard cleanUp(line)
-
+#Check if there are parameters
 if commandLineParams().len == 0:
   discard errorPrompt("no option specified")
 
+#Parse options and execute
 while true:
   p.next
   case p.key
   of "t":
-    putEnv("MAKEFLAGS", fmt"-j{p.val}" 
+    putEnv("MAKEFLAGS", fmt"-j{p.val}"
   of "y":
     yesToAll = "yes"
   of "i":
@@ -137,24 +69,44 @@ while true:
     if multiplePkgs == "yes":
       if yesToAll == "yes":
         for i in allPkgs:
-          installPkg(i)
+          discard installPkg(i)
+          discard addToUpdateScript(i)
       else:
         echo "would you like to install those packages [y/n]: ", allPkgs
         yn = readLine(stdin)
         if yn == "y":
           for i in allPkgs:
-            installPkg(i)
+            discard installPkg(i)
+            discard addToUpdateScript(i)
         else:
           echo yn
           quit(0)
     else:
       if yesToAll == "yes":
-        installPkg(p.val)
+        discard installPkg(p.val)
+        discard addToUpdateScript(p.val)
       else:
         echo "would you like to install this package [y/n]: ", p.val
         yn = readLine(stdin)
         if yn == "y":
-          installPkg(p.val)
+          discard installPkg(p.val)
+          discard addToUpdateScript(p.val)
         else:
           echo yn
           quit(0)
+  of "u":
+    if yesToAll == "no":
+      echo "would you like to update? [y/n]: "
+      yn = stdin.readLine()
+      if yn == "y":
+        for line in lines("to-update"):
+          discard installPkg(line)
+      else:
+        quit(0)
+    else:
+      for line in lines("to-update"):
+        discard installPkg(line)
+  of "h":
+    echo usageString
+  else:
+    errorPrompt("invalid option.")
