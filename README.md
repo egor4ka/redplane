@@ -16,3 +16,6 @@ No idea, i created this just to test my nim knowledge, if you want a decent AUR 
 
 # Why the fuck is it in both Nim and Bash?
 Because I have a workflow: write a utility in Bash, and then rewrite it in nim.
+
+# Why is there a bash version?
+It's here only for historical reasons, do not use it as it is outdated. 
