@@ -23,7 +23,7 @@ proc errorPrompt(err: string) =
   echo fmt"KABOOM! plane crash: {err}"
   quit(1)
 
-proc pacmanInstall(pkg: string): int =
+proc pacmanInstall(pkg: string): int = 
   if execShellCmd(fmt"sudo pacman -S {pkg}") != 0:
     return 1
 
@@ -44,9 +44,9 @@ proc addToUpdateScript(pkg: string) =
  
 proc installPkg(pkg: string) =
   if pacmanInstall(pkg) != 0:
-    discard clonePkg(pkg)
-    discard makePkg(pkg)
-    discard cleanUp(pkg)
+    clonePkg(pkg)
+    makePkg(pkg)
+    cleanUp(pkg)
   else:
     echo "pacman has successfully installed the package."
 
