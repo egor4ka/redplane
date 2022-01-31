@@ -8,7 +8,7 @@ var
   yesToAll = false
   yn: char
   multiplePkgs = false
-  allPkgs = seq[string]
+  allPkgs: seq[string]
   usageString = """
   -h: return help
   -u: update packages in to-update file
