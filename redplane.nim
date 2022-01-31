@@ -4,10 +4,10 @@ import os, strformat, strutils, parseopt
 #Declare variables
 var
   p = initOptParser()
-  yesToAll = ""
-  yn = ""
-  multiplePkgs = ""
-  allPkgs = newSeq[string]
+  yesToAll: string
+  yn: string
+  multiplePkgs: string
+  allPkgs = seq[string]
   usageString = """
   -h: return help
   -u: update packages in to-update file
