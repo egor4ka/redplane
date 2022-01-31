@@ -1,12 +1,13 @@
 #Import necessary libraries
 import os, strformat, strutils, parseopt
 
+
 #Declare variables
 var
   p = initOptParser()
-  yesToAll: string
+  yesToAll = false
   yn: char
-  multiplePkgs: string
+  multiplePkgs = false
   allPkgs = seq[string]
   usageString = """
   -h: return help
@@ -16,8 +17,9 @@ var
   tip: use the flags that requite a value like -flag:value, not -flag value
 """
 
+
 #Create the required procedures
-proc errorPrompt(err: string):
+proc errorPrompt(err: string) = 
   echo fmt"KABOOM! plane crash: {err}"
   quit(1)
 
@@ -25,23 +27,22 @@ proc pacmanInstall(pkg: string): int =
   if execShellCmd(fmt"sudo pacman -S {pkg}") != 0:
     return 1
 
-proc mkfiles():
+proc mkfiles() = 
   discard execShellCmd("touch to-update")
 
-proc clonePkg(pkg: string):
+proc clonePkg(pkg: string) =
   discard execShellCmd(fmt"git clone https://aur.archlinux.org/{pkg}")
 
-proc makePkg(pkg: string):
+proc makePkg(pkg: string) =
   discard execShellCmd(fmt"(cd {pkg} && makepkg PKGBUILD)")
 
-
-proc cleanUp(pkg: string):
+proc cleanUp(pkg: string) =
   discard execShellCmd(fmt"rm -rf {pkg}")
 
-proc addToUpdateScript(pkg: string):
+proc addToUpdateScript(pkg: string) =
   discard execShellCmd(fmt"tee -a {pkg} to-update")
  
-proc installPkg(pkg: string): int =
+proc installPkg(pkg: string) =
   if pacmanInstall(pkg) != 0:
     discard clonePkg(pkg)
     discard makePkg(pkg)
@@ -49,12 +50,15 @@ proc installPkg(pkg: string): int =
   else:
     echo "pacman has successfully installed the package."
 
+
 #Create required files
-discard mkfiles()
+mkfiles()
+
 
 #Check if there are parameters
-if commandLineParams().len == 0:
-  discard errorPrompt("no option specified")
+if paramCount() == 0:
+  errorPrompt("no option specified")
+
 
 #Parse options and execute
 while true:
@@ -63,54 +67,54 @@ while true:
   of "t":
     putEnv("MAKEFLAGS", fmt"-j{p.val}"
   of "y":
-    yesToAll = 'y'
+    yesToAll = true
   of "i":
     for i in p.val:
       if i == ',':
         echo "multiple packages detected! attempting parse"
         multiplePkgs = true
         allPkgs = p.val.split(",")
-    if multiplePkgs == 'y' :
-      if yesToAll == 'n':
+    if multiplePkgs:
+      if yesToAll:
         for i in allPkgs:
-          discard installPkg(i)
-          discard addToUpdateScript(i)
+          installPkg(i)
+          addToUpdateScript(i)
       else:
-        echo "would you like to install those packages [y/n]: ", allPkgs
+        echo "would you like to install multiple packages? [y/n]: "
         yn = stdin.readChar()
         if yn == 'y':
           for i in allPkgs:
-            discard installPkg(i)
-            discard addToUpdateScript(i)
+            installPkg(i)
+            addToUpdateScript(i)
         else:
           echo yn
           quit(0)
     else:
-      if yesToAll == '':
-        discard installPkg(p.val)
-        discard addToUpdateScript(p.val)
+      if yesToAll:
+        installPkg(p.val)
+        addToUpdateScript(p.val)
       else:
-        echo "would you like to install this package [y/n]: ", p.val
+        echo fmt"would you like to install {p.val}? [y/n]: "
         yn = stdin.readChar()
         if yn == 'y':
-          discard installPkg(p.val)
-          discard addToUpdateScript(p.val)
+          installPkg(p.val)
+          addToUpdateScript(p.val)
         else:
           echo yn
           quit(0)
   of "u":
-    if yesToAll == '':
+    if not yesToAll:
       echo "would you like to update? [y/n]: "
       yn = stdin.readChar()
       if yn == 'y':
         for line in lines("to-update"):
-          discard installPkg(line)
+          installPkg(line)
       else:
         quit(0)
     else:
       for line in lines("to-update"):
-        discard installPkg(line)
+        installPkg(line)
   of "h":
     echo usageString
   else:
-    errorPrompt("invalid option.")
+    errorPrompt("invalid option.") 
