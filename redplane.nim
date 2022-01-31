@@ -5,7 +5,7 @@ import os, strformat, strutils, parseopt
 var
   p = initOptParser()
   yesToAll: string
-  yn: string
+  yn: char
   multiplePkgs: string
   allPkgs = seq[string]
   usageString = """
@@ -17,26 +17,30 @@ var
 """
 
 #Create the required procedures
-proc errorPrompt(err: string): int =
+proc errorPrompt(err: string):
   echo fmt"KABOOM! plane crash: {err}"
   quit(1)
+
 proc pacmanInstall(pkg: string): int =
   if execShellCmd(fmt"sudo pacman -S {pkg}") != 0:
     return 1
-proc mkfiles(): int =
+
+proc mkfiles():
   discard execShellCmd("touch to-update")
-  return 0
-proc clonePkg(pkg: string): int =
+
+proc clonePkg(pkg: string):
   discard execShellCmd(fmt"git clone https://aur.archlinux.org/{pkg}")
-proc makePkg(pkg: string): int =
+
+proc makePkg(pkg: string):
   discard execShellCmd(fmt"(cd {pkg} && makepkg PKGBUILD)")
-  return 0
-proc cleanUp(pkg: string): int =
+
+
+proc cleanUp(pkg: string):
   discard execShellCmd(fmt"rm -rf {pkg}")
-  return 0
-proc addToUpdateScript(pkg: string): int =
+
+proc addToUpdateScript(pkg: string):
   discard execShellCmd(fmt"tee -a {pkg} to-update")
-  return 0
+ 
 proc installPkg(pkg: string): int =
   if pacmanInstall(pkg) != 0:
     discard clonePkg(pkg)
@@ -59,22 +63,22 @@ while true:
   of "t":
     putEnv("MAKEFLAGS", fmt"-j{p.val}"
   of "y":
-    yesToAll = "yes"
+    yesToAll = 'y'
   of "i":
     for i in p.val:
       if i == ',':
         echo "multiple packages detected! attempting parse"
-        multiplePkgs = "yes"
+        multiplePkgs = true
         allPkgs = p.val.split(",")
-    if multiplePkgs == "yes":
-      if yesToAll == "yes":
+    if multiplePkgs == 'y' :
+      if yesToAll == 'n':
         for i in allPkgs:
           discard installPkg(i)
           discard addToUpdateScript(i)
       else:
         echo "would you like to install those packages [y/n]: ", allPkgs
-        yn = readLine(stdin)
-        if yn == "y":
+        yn = stdin.readChar()
+        if yn == 'y':
           for i in allPkgs:
             discard installPkg(i)
             discard addToUpdateScript(i)
@@ -82,23 +86,23 @@ while true:
           echo yn
           quit(0)
     else:
-      if yesToAll == "yes":
+      if yesToAll == '':
         discard installPkg(p.val)
         discard addToUpdateScript(p.val)
       else:
         echo "would you like to install this package [y/n]: ", p.val
-        yn = readLine(stdin)
-        if yn == "y":
+        yn = stdin.readChar()
+        if yn == 'y':
           discard installPkg(p.val)
           discard addToUpdateScript(p.val)
         else:
           echo yn
           quit(0)
   of "u":
-    if yesToAll == "no":
+    if yesToAll == '':
       echo "would you like to update? [y/n]: "
-      yn = stdin.readLine()
-      if yn == "y":
+      yn = stdin.readChar()
+      if yn == 'y':
         for line in lines("to-update"):
           discard installPkg(line)
       else:
