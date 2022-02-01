@@ -14,8 +14,3 @@ Running redplane -h should tell you all you need
 # Why would I use it over any other pacman wrapper?
 No idea, i created this just to test my nim knowledge, if you want a decent AUR helper check out pakku.
 
-# Why the fuck is it in both Nim and Bash?
-Because I have a workflow: write a utility in Bash, and then rewrite it in nim.
-
-# Why is there a bash version?
-It's here only for historical reasons, do not use it as it is outdated. 
